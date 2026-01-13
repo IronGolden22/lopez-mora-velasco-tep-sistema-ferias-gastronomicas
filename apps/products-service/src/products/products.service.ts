@@ -1,5 +1,6 @@
-import { Injectable, InternalServerErrorException, Logger } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
@@ -20,7 +21,7 @@ export class ProductsService {
       return product;
     } catch (error) {
       this.logger.error(error);
-      throw new InternalServerErrorException('Error creando el producto (Check logs)');
+      throw new InternalServerErrorException('Error al crear el producto');
     }
   }
 
@@ -28,7 +29,35 @@ export class ProductsService {
     return this.productRepository.find();
   }
 
-  findOne(id: number) {
-    return `This action returns a #${id} product`;
+  async findOne(id: string) {
+    const product = await this.productRepository.findOneBy({ id });
+    if (!product) {
+      throw new NotFoundException(`Producto con el ${id} no encontrado`);
+    }
+    return product;
+  }
+
+  async update(id: string, updateProductDto: UpdateProductDto) {
+    // preload busca un producto por id y le "parcha" los datos nuevos
+    const product = await this.productRepository.preload({
+      id: id,
+      ...updateProductDto,
+    });
+
+    if (!product) throw new NotFoundException(`Producto con el ${id} no encontrado`);
+
+    try {
+      await this.productRepository.save(product);
+      return product;
+    } catch (error) {
+      this.logger.error(error);
+      throw new InternalServerErrorException('Error al actualizar el producto');
+    }
+  }
+
+  async remove(id: string) {
+    const product = await this.findOne(id); // Reutilizamos findOne para asegurar que existe
+    await this.productRepository.remove(product);
+    return { message: `Producto con el id ${id} eliminado exitosamente` };
   }
 }
