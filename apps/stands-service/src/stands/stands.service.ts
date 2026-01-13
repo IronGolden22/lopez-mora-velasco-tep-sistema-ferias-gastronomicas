@@ -26,4 +26,28 @@ export class StandsService {
   async findOne(id: string) {
     return await this.standRepository.findOneBy({ id });
   }
+
+  async update(id: string, updateStandDto: any) {
+
+    const stand = await this.standRepository.preload({
+      id: id,
+      ...updateStandDto,
+    });
+
+    if (!stand) {
+      throw new Error(`Stand #${id} not found`); 
+    }
+
+    return await this.standRepository.save(stand);
+  }
+
+  // Eliminar un puesto
+  async remove(id: string) {
+    const stand = await this.findOne(id);
+    if (stand) {
+      return await this.standRepository.remove(stand);
+    }
+    return null;
+  }
+
 }
