@@ -1,5 +1,10 @@
-export class CreateOrderDto {
-  total: number;
-  status: string;
+import { IsNumber, IsOptional, IsPositive } from 'class-validator';
 
+export class CreateOrderDto {
+  @IsNumber()
+  @IsPositive()
+  total: number;
+
+  @IsOptional()
+  status?: string;
 }
