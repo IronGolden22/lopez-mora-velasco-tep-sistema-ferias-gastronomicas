@@ -22,30 +22,62 @@ export class StandsService {
     this.logger.log(`Validando dueño ID: ${ownerId}...`);
 
     try {
+      // 1. Validar usuario en microservicio Users
       const user = await firstValueFrom(
         this.usersClient.send('validate_user', ownerId) 
       );
 
-      if (!user || !user.id || user.id !== ownerId) {
-        throw new Error('User not found');
+      if (!user) throw new Error('User not found');
+
+      // 2. Validar ROL: Solo EMPRENDEDOR puede crear
+      if (user.role !== 'EMPRENDEDOR') {
+         this.logger.warn(`Intento de creación por rol no autorizado: ${user.role}`);
+         throw new HttpException('Solo los emprendedores pueden crear puestos.', HttpStatus.FORBIDDEN);
       }
 
-      this.logger.log(`✅ Dueño validado: ${user.email}`);
+      this.logger.log(`Dueño validado: ${user.email}`);
       
-      const newStand = this.standRepository.create(createStandDto);
+      const newStand = this.standRepository.create({
+        ...createStandDto,
+        status: 'PENDIENTE' 
+      });
       return await this.standRepository.save(newStand);
       
     } catch (error) {
+      if (error instanceof HttpException) throw error;
       this.logger.error(`Validación fallida para: ${ownerId}`);
-      throw new HttpException('El usuario no existe o está inactivo', HttpStatus.NOT_FOUND);
+      throw new HttpException('El usuario no existe o no es válido', HttpStatus.NOT_FOUND);
     }
   }
 
-  async findAll() { return this.standRepository.find(); }
+  // Aquí está el filtro de status que necesita el Catálogo
+  async findAll(status?: string) { 
+    const where: any = {};
+    if (status) {
+      where.status = status;
+    }
+    return this.standRepository.find({ where }); 
+  }
 
-  async findOne(id: string) { return this.standRepository.findOneBy({ id }); }
+  async findOne(id: string) { 
+    return this.standRepository.findOneBy({ id }); 
+  }
 
-  async update(id: string, dto: UpdateStandDto) { return this.standRepository.update(id, dto); }
+  async update(id: string, dto: UpdateStandDto) { 
+    await this.standRepository.update(id, dto);
+    return this.findOne(id);
+  }
   
-  async remove(id: string) { return this.standRepository.delete(id); }
+  async remove(id: string) { 
+    return this.standRepository.delete(id); 
+  }
+
+  async approveStand(id: string) {
+    const stand = await this.findOne(id);
+    if (!stand) throw new HttpException('Puesto no encontrado', HttpStatus.NOT_FOUND);
+
+    stand.status = 'ACTIVO'; 
+    this.logger.log(`Puesto aprobado: ${stand.name}`);
+    return this.standRepository.save(stand);
+  }
 }

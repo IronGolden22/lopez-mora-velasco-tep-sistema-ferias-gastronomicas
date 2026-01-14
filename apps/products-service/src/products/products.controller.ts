@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe } from '@nestjs/common';
+import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe, Query } from '@nestjs/common'; // 👈 Agregamos Query
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
@@ -8,7 +8,7 @@ import { UpdateProductDto } from './dto/update-product.dto';
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  //RPC: Validar existencia y stock (SOLO LECTURA)
+  // RPC: Validar existencia y stock (SOLO LECTURA)
   @MessagePattern('validate_product')
   async validateProduct(@Payload() data: { id: string; quantity: number }) {
     console.log(`(RPC) Verificando producto ID: ${data.id} | Pide: ${data.quantity}`);
@@ -30,7 +30,6 @@ export class ProductsController {
     }
   }
 
-  // 👇 NUEVO RPC: Ejecutar la resta de stock (ESCRITURA)
   @MessagePattern('reduce_stock')
   async reduceStock(@Payload() items: { productId: string; quantity: number }[]) {
     console.log('(RPC) Solicitud de reducción de stock recibida');
@@ -38,7 +37,6 @@ export class ProductsController {
       return await this.productsService.reduceStock(items);
     } catch (error) {
       console.error('Error reduciendo stock:', error.message);
-      // Devolvemos un error claro para que Pedidos aborte la creación
       throw new Error(error.message);
     }
   }
@@ -49,7 +47,12 @@ export class ProductsController {
   }
 
   @Get()
-  findAll() { return this.productsService.findAll(); }
+  findAll(
+    @Query('category') category?: string,
+    @Query('standId') standId?: string
+  ) {
+    return this.productsService.findAll({ category, standId });
+  }
 
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) { 

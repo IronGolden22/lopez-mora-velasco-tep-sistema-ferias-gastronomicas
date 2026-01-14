@@ -11,6 +11,9 @@ export class Product {
   @Column('text')
   description: string;
 
+  @Column('text', { default: 'General' })
+  category: string;
+
   @Column('float') 
   price: number;
 

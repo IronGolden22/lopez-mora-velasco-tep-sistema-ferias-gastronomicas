@@ -1,13 +1,16 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
+import { LoggingInterceptor } from './logging.interceptor';
+import { AllExceptionsFilter } from './http-exception.filter';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  app.enableCors();
-  
-  // Agregamos '0.0.0.0' para forzar IPv4
-  await app.listen(3000, '0.0.0.0'); 
-  
-  console.log('🚀 API Gateway LISTO en: http://127.0.0.1:3000');
+
+  //aop logging y manejo errores global
+  app.useGlobalInterceptors(new LoggingInterceptor());
+  app.useGlobalFilters(new AllExceptionsFilter());
+
+  await app.listen(3000);
+  console.log('🚀 Gateway corriendo en puerto 3000');
 }
 bootstrap();
