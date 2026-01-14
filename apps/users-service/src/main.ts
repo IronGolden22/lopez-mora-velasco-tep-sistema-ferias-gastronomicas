@@ -32,7 +32,6 @@ async function bootstrap() {
   await app.startAllMicroservices();
   console.log(`RPC de Usuarios listo en puerto ${rpcPort}`);
 
-  // 2. Escuchar peticiones HTTP después
   const port = process.env.PORT || '3005';
   await app.listen(parseInt(port, 10));
   console.log(`HTTP Usuarios listo en puerto ${port}`);

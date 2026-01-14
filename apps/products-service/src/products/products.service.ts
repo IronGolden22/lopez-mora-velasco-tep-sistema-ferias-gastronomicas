@@ -23,18 +23,19 @@ export class ProductsService {
     this.logger.log(`Validando si el puesto ${standId} existe...`);
 
     try {
+      // 👇 Usamos string plano para coincidir con StandsController
       const stand = await firstValueFrom(
-        this.standsClient.send({ cmd: 'validate_stand' }, { id: standId })
+        this.standsClient.send('validate_stand', standId)
       );
 
       if (!stand) {
         throw new Error('Puesto no encontrado');
       }
       
-      this.logger.log(`Puesto confirmado: ${stand.name}`);
+      this.logger.log(`✅ Puesto confirmado: ${stand.name}`);
 
     } catch (error) {
-      this.logger.error(`Error validando puesto: ${standId}`);
+      this.logger.error(`❌ Error validando puesto: ${standId}`);
       throw new HttpException('El puesto no existe o no es válido', HttpStatus.NOT_FOUND);
     }
 
@@ -42,11 +43,24 @@ export class ProductsService {
     return await this.productRepository.save(newProduct);
   }
 
-  findAll() { return this.productRepository.find(); }
+  async findAll() { 
+    return await this.productRepository.find(); 
+  }
 
-  findOne(id: string) { return this.productRepository.findOneBy({ id }); }
+  async findOne(id: string) { 
+    // Aseguramos que el findOne devuelva todo lo necesario para la validación de stock
+    const product = await this.productRepository.findOneBy({ id });
+    if (!product) throw new HttpException('Producto no encontrado', HttpStatus.NOT_FOUND);
+    return product;
+  }
 
-  update(id: string, dto: UpdateProductDto) { return this.productRepository.update(id, dto); }
+  async update(id: string, dto: UpdateProductDto) { 
+    await this.productRepository.update(id, dto); 
+    return this.findOne(id);
+  }
 
-  remove(id: string) { return this.productRepository.delete(id); }
+  async remove(id: string) { 
+    await this.productRepository.delete(id); 
+    return { deleted: true };
+  }
 }

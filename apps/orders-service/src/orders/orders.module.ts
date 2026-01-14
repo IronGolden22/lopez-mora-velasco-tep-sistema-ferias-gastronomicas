@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { ClientsModule, Transport } from '@nestjs/microservices'; // 👈 Importante
+import { ClientsModule, Transport } from '@nestjs/microservices';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { OrdersService } from './orders.service';
 import { OrdersController } from './orders.controller';
 import { Order } from './entities/order.entity';
-import { ConfigModule, ConfigService } from '@nestjs/config';
+// Importa también la entidad de OrderItem si la tienes separada
 
 @Module({
   imports: [
@@ -17,8 +18,32 @@ import { ConfigModule, ConfigService } from '@nestjs/config';
         useFactory: (configService: ConfigService) => ({
           transport: Transport.TCP,
           options: {
-            host: 'localhost', 
-            port: configService.get<number>('PRODUCTS_RPC_PORT'), // Puerto 3006
+            host: 'localhost',
+            port: configService.get<number>('PRODUCTS_RPC_PORT') || 3006,
+          },
+        }),
+      },
+      {
+        name: 'USERS_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.TCP,
+          options: {
+            host: 'localhost',
+            port: configService.get<number>('RPC_PORT') || 3004,
+          },
+        }),
+      },
+      {
+        name: 'STANDS_SERVICE',
+        imports: [ConfigModule],
+        inject: [ConfigService],
+        useFactory: (configService: ConfigService) => ({
+          transport: Transport.TCP,
+          options: {
+            host: 'localhost',
+            port: configService.get<number>('STANDS_RPC_PORT') || 3008,
           },
         }),
       },
