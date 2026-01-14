@@ -1,10 +1,24 @@
 import { Module } from '@nestjs/common';
-import { StandsServiceController } from './stands-service.controller';
-import { StandsServiceService } from './stands-service.service';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { StandsModule } from './stands/stands.module'; 
 
 @Module({
-  imports: [],
-  controllers: [StandsServiceController],
-  providers: [StandsServiceService],
+  imports: [
+
+    TypeOrmModule.forRoot({
+      type: 'postgres',
+      host: 'localhost',
+      port: 5432,
+      username: 'postgres',
+      password: 'pepito2', 
+      database: 'stands_db',
+      autoLoadEntities: true,
+      synchronize: true,
+    }),
+    
+    StandsModule, 
+  ],
+  controllers: [], 
+  providers: [],  
 })
-export class StandsServiceModule {}
+export class StandsServiceModule {} 
