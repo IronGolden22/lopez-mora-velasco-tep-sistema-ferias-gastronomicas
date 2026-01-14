@@ -2,7 +2,6 @@ import * as dotenv from 'dotenv';
 dotenv.config(); 
 
 import { DataSource, DataSourceOptions } from 'typeorm';
-// 👇 1. Importamos la clase User directamente (ajusta la ruta si te la marca en rojo)
 import { User } from '../users/entities/user.entity'; 
 
 export const typeOrmConfig: DataSourceOptions = {
@@ -13,11 +12,11 @@ export const typeOrmConfig: DataSourceOptions = {
   password: process.env.DB_PASSWORD || 'postgres',
   database: process.env.DB_DATABASE || 'users_db',
   
-  // 👇 2. Ponemos la clase aquí directamente, sin rutas raras
+
   entities: [User], 
   
-  synchronize: true, // Esto creará la tabla al guardar
-  logging: true,     // 👇 3. Activamos logs para ver el SQL en la consola
+  synchronize: true, 
+  logging: true,   
 };
 
 export const AppDataSource = new DataSource(typeOrmConfig);
