@@ -3,6 +3,10 @@ import { AppModule } from './app.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  await app.listen(process.env.PORT ?? 3000);
+  
+  // AQUÍ ES DONDE SE DECIDE EL PUERTO 3000 👇
+  await app.listen(3000);
+  
+  console.log('API Gateway is running on: http://localhost:3000');
 }
 bootstrap();
