@@ -18,9 +18,8 @@ export class ProductsController {
   }
 
   @Get(':id')
-  // Agregamos ParseUUIDPipe para validar que sea un UUID válido
   findOne(@Param('id', ParseUUIDPipe) id: string) { 
-    return this.productsService.findOne(id); // <--- ¡Sin el "+"!
+    return this.productsService.findOne(id); 
   }
 
   @Patch(':id')
