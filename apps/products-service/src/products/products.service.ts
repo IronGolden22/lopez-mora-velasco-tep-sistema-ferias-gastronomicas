@@ -2,7 +2,6 @@ import { Inject, Injectable, Logger, HttpException, HttpStatus } from '@nestjs/c
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-// 👇 IMPORTANTE: Agregamos estos operadores de TypeORM
 import { Repository, MoreThan, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm'; 
 import { Product } from './entities/product.entity';
 import { ClientProxy } from '@nestjs/microservices';
@@ -52,7 +51,6 @@ async findAll(params?: { category?: string; standId?: string; minPrice?: number;
     if (params?.category) where.category = params.category;
     if (params?.standId) where.standId = params.standId;
 
-    // 👇 CORREGIDO: Usamos params?.propiedad para evitar error de "undefined"
     if (params?.minPrice && params?.maxPrice) {
       where.price = Between(params.minPrice, params.maxPrice);
     } else if (params?.minPrice) {

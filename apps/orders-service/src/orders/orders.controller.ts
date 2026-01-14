@@ -7,7 +7,7 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 export class OrdersController {
   constructor(private readonly ordersService: OrdersService) {}
 
-  // 📊 Endpoint de Estadísticas (Colocar ANTES de :id)
+  //  Endpoint de Estadísticas (Colocar ANTES de :id)
   @Get('stats/dashboard')
   getStats() {
     return this.ordersService.getStatistics();
@@ -18,7 +18,7 @@ export class OrdersController {
     return this.ordersService.create(createOrderDto);
   }
 
-  // 🔍 FindAll con más filtros
+  //  FindAll con más filtros
   @Get()
   findAll(
     @Query('clientId') clientId?: string,
