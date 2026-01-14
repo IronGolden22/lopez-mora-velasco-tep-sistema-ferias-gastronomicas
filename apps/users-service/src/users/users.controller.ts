@@ -25,7 +25,6 @@ import { SelfOrOrganizadorGuard } from '../auth/guards/self-or-organizador.guard
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
-  // 👇 MÉTODO RPC CORREGIDO
   @MessagePattern('validate_user') 
   async validateUser(@Payload() id: string) {
     console.log(`RPC RECIBIDO EN USUARIOS - Buscando ID: ${id}`);

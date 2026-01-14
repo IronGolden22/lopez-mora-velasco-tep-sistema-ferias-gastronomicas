@@ -8,36 +8,38 @@ import { UpdateProductDto } from './dto/update-product.dto';
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
-  // 👇 RPC: Validar existencia y stock para Pedidos
+  //RPC: Validar existencia y stock (SOLO LECTURA)
   @MessagePattern('validate_product')
   async validateProduct(@Payload() data: { id: string; quantity: number }) {
-    console.log(`🔎 (RPC) Verificando producto ID: ${data.id} | Cantidad solicitada: ${data.quantity}`);
+    console.log(`(RPC) Verificando producto ID: ${data.id} | Pide: ${data.quantity}`);
     
     try {
       const product = await this.productsService.findOne(data.id);
       
-      if (!product) {
-        console.log(`Producto ${data.id} no existe`);
-        return null;
-      }
+      if (!product) return null;
 
-      // Verificamos si hay suficiente stock
       const hasStock = product.stock >= data.quantity;
       
-      if (!hasStock) {
-        console.log(`⚠️ Stock insuficiente para ${product.name}: Tiene ${product.stock}, pide ${data.quantity}`);
-      } else {
-        console.log(`✅ Stock confirmado para ${product.name}`);
-      }
-
-      // Retornamos el producto con la bandera de stock
       return { 
         ...product, 
         hasStock 
       }; 
     } catch (error) {
-      console.error('💥 Error RPC en Productos:', error.message);
+      console.error('Error RPC validate:', error.message);
       return null;
+    }
+  }
+
+  // 👇 NUEVO RPC: Ejecutar la resta de stock (ESCRITURA)
+  @MessagePattern('reduce_stock')
+  async reduceStock(@Payload() items: { productId: string; quantity: number }[]) {
+    console.log('(RPC) Solicitud de reducción de stock recibida');
+    try {
+      return await this.productsService.reduceStock(items);
+    } catch (error) {
+      console.error('Error reduciendo stock:', error.message);
+      // Devolvemos un error claro para que Pedidos aborte la creación
+      throw new Error(error.message);
     }
   }
 
@@ -47,9 +49,7 @@ export class ProductsController {
   }
 
   @Get()
-  findAll() {
-    return this.productsService.findAll();
-  }
+  findAll() { return this.productsService.findAll(); }
 
   @Get(':id')
   findOne(@Param('id', ParseUUIDPipe) id: string) { 

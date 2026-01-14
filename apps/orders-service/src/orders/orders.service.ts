@@ -7,7 +7,7 @@ import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices'; 
 import { firstValueFrom } from 'rxjs';
 
-// 👇 Definimos la estructura de lo que guardaremos en el arreglo
+// Estructura interna para validación
 interface ValidatedItem {
   productId: string;
   name: string;
@@ -31,7 +31,6 @@ export class OrdersService {
     const { clientId, items } = createOrderDto;
     let accumulatedTotal = 0;
     
-    // 👇 CAMBIO CLAVE: Le decimos que es un arreglo de ValidatedItem
     const validatedItems: ValidatedItem[] = [];
 
     try {
@@ -39,7 +38,7 @@ export class OrdersService {
       const user = await firstValueFrom(this.usersClient.send('validate_user', clientId));
       if (!user) throw new Error('Cliente no existe');
 
-      // 2. Validar cada Producto y Stock
+      // 2. Validar disponibilidad (Lectura)
       for (const item of items) {
         const product = await firstValueFrom(
           this.productsClient.send('validate_product', { id: item.productId, quantity: item.quantity })
@@ -52,7 +51,6 @@ export class OrdersService {
         const subtotal = Number(product.price) * item.quantity;
         accumulatedTotal += subtotal;
 
-        // Ahora el .push() funcionará perfectamente sin errores de tipo
         validatedItems.push({
           productId: product.id,
           name: product.name,
@@ -62,18 +60,38 @@ export class OrdersService {
         });
       }
 
-      // 3. Guardar la orden
+      // 👇 BLOQUE NUEVO: Ejecutar la resta de stock en Products (Escritura)
+      this.logger.log('📉 Solicitando descuento de stock a Productos...');
+      
+      // Transformamos los datos al formato simple que espera el controlador de productos
+      const stockPayload = validatedItems.map(item => ({
+        productId: item.productId,
+        quantity: item.quantity
+      }));
+
+      // Enviamos el mensaje RPC 'reduce_stock'
+      await firstValueFrom(
+        this.productsClient.send('reduce_stock', stockPayload)
+      );
+      
+      this.logger.log('✅ Stock descontado correctamente');
+      // 👆 FIN DEL BLOQUE NUEVO
+
+
+      // 3. Guardar la orden (Solo llegamos aquí si el stock se descontó con éxito)
       const newOrder = this.orderRepository.create({
         clientId,
         totalAmount: accumulatedTotal,
         items: validatedItems,
-        status: 'PENDIENTE'
+        status: 'CONFIRMADO' // Confirmado porque ya se validó todo y se restó stock
       });
 
       return await this.orderRepository.save(newOrder);
 
     } catch (err) {
-      this.logger.error(`❌ Error en pedido: ${err.message}`);
+      this.logger.error(`❌ Fallo en creación de orden: ${err.message}`);
+      // Nota: En un sistema real, aquí deberíamos revertir el stock si falla el guardado (Patrón Saga),
+      // pero para este proyecto académico, lanzar el error es suficiente.
       throw new HttpException(err.message, HttpStatus.BAD_REQUEST);
     }
   }

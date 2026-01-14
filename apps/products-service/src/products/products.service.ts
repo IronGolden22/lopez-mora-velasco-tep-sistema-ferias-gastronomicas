@@ -19,19 +19,14 @@ export class ProductsService {
 
   async create(createProductDto: CreateProductDto) {
     const { standId } = createProductDto;
-
     this.logger.log(`Validando si el puesto ${standId} existe...`);
 
     try {
-      // 👇 Usamos string plano para coincidir con StandsController
       const stand = await firstValueFrom(
         this.standsClient.send('validate_stand', standId)
       );
 
-      if (!stand) {
-        throw new Error('Puesto no encontrado');
-      }
-      
+      if (!stand) throw new Error('Puesto no encontrado');
       this.logger.log(`✅ Puesto confirmado: ${stand.name}`);
 
     } catch (error) {
@@ -43,12 +38,9 @@ export class ProductsService {
     return await this.productRepository.save(newProduct);
   }
 
-  async findAll() { 
-    return await this.productRepository.find(); 
-  }
+  async findAll() { return await this.productRepository.find(); }
 
   async findOne(id: string) { 
-    // Aseguramos que el findOne devuelva todo lo necesario para la validación de stock
     const product = await this.productRepository.findOneBy({ id });
     if (!product) throw new HttpException('Producto no encontrado', HttpStatus.NOT_FOUND);
     return product;
@@ -62,5 +54,23 @@ export class ProductsService {
   async remove(id: string) { 
     await this.productRepository.delete(id); 
     return { deleted: true };
+  }
+
+  // 👇 NUEVO MÉTODO: Lógica para descontar inventario
+  async reduceStock(items: { productId: string; quantity: number }[]) {
+    this.logger.log('📉 Iniciando reducción de stock...');
+    
+    for (const item of items) {
+      const product = await this.findOne(item.productId);
+      
+      if (product.stock < item.quantity) {
+        throw new Error(`Stock insuficiente para ${product.name}`);
+      }
+
+      product.stock -= item.quantity;
+      await this.productRepository.save(product);
+      this.logger.log(`✅ Stock actualizado: ${product.name} (Quedan: ${product.stock})`);
+    }
+    return { success: true };
   }
 }
