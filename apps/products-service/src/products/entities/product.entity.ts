@@ -11,7 +11,10 @@ export class Product {
   @Column('text')
   description: string;
 
-  @Column('float') // Para decimales (precio)
+  @Column('text', { default: 'General' })
+  category: string;
+
+  @Column('float') 
   price: number;
 
   @Column('int')
@@ -19,4 +22,7 @@ export class Product {
 
   @Column('boolean', { default: true })
   isActive: boolean;
+
+  @Column()
+  standId: string;
 }

@@ -11,6 +11,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices'; 
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
@@ -23,6 +24,28 @@ import { SelfOrOrganizadorGuard } from '../auth/guards/self-or-organizador.guard
 @Controller('users')
 export class UsersController {
   constructor(private readonly usersService: UsersService) {}
+
+  @MessagePattern('validate_user') 
+  async validateUser(@Payload() id: string) {
+    console.log(`RPC RECIBIDO EN USUARIOS - Buscando ID: ${id}`);
+    
+    if (!id) return null;
+
+    try {
+      const user = await this.usersService.validateUserById(id);
+      if (!user) {
+        console.log(`Usuario no encontrado en BD: ${id}`);
+        return null;
+      }
+
+      console.log(`Usuario confirmado: ${user.email}`);
+      const { password, ...result } = user;
+      return result;
+    } catch (error) {
+      console.error('Error RPC:', error.message);
+      return null;
+    }
+  }
 
   @Post('register')
   @HttpCode(HttpStatus.CREATED)

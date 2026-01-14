@@ -1,19 +1,28 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { StandsModule } from './stands/stands.module'; 
+import { ConfigModule, ConfigService } from '@nestjs/config'; // 👈 Importar Config
+import { StandsModule } from './stands/stands.module';
 
 @Module({
   imports: [
-
-    TypeOrmModule.forRoot({
-      type: 'postgres',
-      host: 'localhost',
-      port: 5432,
-      username: 'postgres',
-      password: 'pepito2', 
-      database: 'stands_db',
-      autoLoadEntities: true,
-      synchronize: true,
+    ConfigModule.forRoot({
+      isGlobal: true,
+      envFilePath: '.env',
+    }),
+    
+    TypeOrmModule.forRootAsync({
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => ({
+        type: 'postgres',
+        host: configService.get<string>('STANDS_DB_HOST'),
+        port: configService.get<number>('STANDS_DB_PORT'),
+        username: configService.get<string>('STANDS_DB_USERNAME'),
+        password: configService.get<string>('STANDS_DB_PASSWORD'),
+        database: configService.get<string>('STANDS_DB_DATABASE'), 
+        autoLoadEntities: true,
+        synchronize: true,
+      }),
     }),
     
     StandsModule, 
@@ -21,4 +30,4 @@ import { StandsModule } from './stands/stands.module';
   controllers: [], 
   providers: [],  
 })
-export class StandsServiceModule {} 
+export class StandsServiceModule {}

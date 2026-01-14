@@ -19,21 +19,22 @@ async function bootstrap() {
 
   app.useGlobalFilters(new HttpExceptionFilter());
 
-  const port = process.env.PORT || '3005';
-  await app.listen(parseInt(port, 10));
-  console.log(`Servicio corriendo en puerto ${port}`);
 
   const rpcPort = process.env.RPC_PORT || '3004';
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.TCP,
     options: {
-      host: 'localhost',
+      host: '0.0.0.0',
       port: parseInt(rpcPort, 10),
     },
   });
 
   await app.startAllMicroservices();
-  console.log(`RPC en puerto ${rpcPort}`);
+  console.log(`RPC de Usuarios listo en puerto ${rpcPort}`);
+
+  const port = process.env.PORT || '3005';
+  await app.listen(parseInt(port, 10));
+  console.log(`HTTP Usuarios listo en puerto ${port}`);
 }
 
 bootstrap();

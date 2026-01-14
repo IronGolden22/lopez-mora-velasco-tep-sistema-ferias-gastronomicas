@@ -104,12 +104,15 @@ export class UsersService {
     return user;
   }
 
-  async validateUserById(id: string): Promise<User | null> {
-    const user = await this.userRepository.findOne({
-      where: { id, isActive: true },
-    });
+async validateUserById(id: string): Promise<User | null> {
+    if (!id || typeof id !== 'string') return null;
 
-    return user || null;
+    return await this.userRepository.findOne({
+      where: { 
+        id: id,            
+        isActive: true    
+      },
+    });
   }
 
   async getUserRole(id: string): Promise<Role | null> {

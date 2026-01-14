@@ -1,63 +1,97 @@
-import { Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, MoreThan, Between, MoreThanOrEqual, LessThanOrEqual } from 'typeorm'; 
 import { Product } from './entities/product.entity';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class ProductsService {
-  private readonly logger = new Logger('ProductsService');
+  private readonly logger = new Logger(ProductsService.name);
 
   constructor(
     @InjectRepository(Product)
     private readonly productRepository: Repository<Product>,
+    @Inject('STANDS_SERVICE') private readonly standsClient: ClientProxy,
   ) {}
 
   async create(createProductDto: CreateProductDto) {
+    const { standId } = createProductDto;
+
+    this.logger.log(`Validando si el puesto ${standId} existe...`);
+
     try {
-      const product = this.productRepository.create(createProductDto);
-      await this.productRepository.save(product);
-      return product;
+      const stand = await firstValueFrom(
+        this.standsClient.send('validate_stand', standId)
+      );
+
+      if (!stand) {
+        throw new Error('Puesto no encontrado');
+      }
+      
+      this.logger.log(` Puesto confirmado: ${stand.name}`);
+
     } catch (error) {
-      this.logger.error(error);
-      throw new InternalServerErrorException('Error al crear el producto');
+      this.logger.error(` Error validando puesto: ${standId}`);
+      throw new HttpException('El puesto no existe o no es válido', HttpStatus.NOT_FOUND);
     }
+
+    const newProduct = this.productRepository.create(createProductDto);
+    return await this.productRepository.save(newProduct);
   }
 
-  findAll() {
-    return this.productRepository.find();
+async findAll(params?: { category?: string; standId?: string; minPrice?: number; maxPrice?: number }) { 
+    const where: any = {
+      stock: MoreThan(0), 
+      isActive: true 
+    };
+
+    if (params?.category) where.category = params.category;
+    if (params?.standId) where.standId = params.standId;
+
+    if (params?.minPrice && params?.maxPrice) {
+      where.price = Between(params.minPrice, params.maxPrice);
+    } else if (params?.minPrice) {
+      where.price = MoreThanOrEqual(params.minPrice);
+    } else if (params?.maxPrice) {
+      where.price = LessThanOrEqual(params.maxPrice);
+    }
+    
+    return await this.productRepository.find({ where }); 
   }
 
-  async findOne(id: string) {
+  async findOne(id: string) { 
     const product = await this.productRepository.findOneBy({ id });
-    if (!product) {
-      throw new NotFoundException(`Producto con el ${id} no encontrado`);
-    }
+    if (!product) throw new HttpException('Producto no encontrado', HttpStatus.NOT_FOUND);
     return product;
   }
 
-  async update(id: string, updateProductDto: UpdateProductDto) {
-    // preload busca un producto por id y le "parcha" los datos nuevos
-    const product = await this.productRepository.preload({
-      id: id,
-      ...updateProductDto,
-    });
-
-    if (!product) throw new NotFoundException(`Producto con el ${id} no encontrado`);
-
-    try {
-      await this.productRepository.save(product);
-      return product;
-    } catch (error) {
-      this.logger.error(error);
-      throw new InternalServerErrorException('Error al actualizar el producto');
-    }
+  async update(id: string, dto: UpdateProductDto) { 
+    await this.productRepository.update(id, dto); 
+    return this.findOne(id);
   }
 
-  async remove(id: string) {
-    const product = await this.findOne(id); // Reutilizamos findOne para asegurar que existe
-    await this.productRepository.remove(product);
-    return { message: `Producto con el id ${id} eliminado exitosamente` };
+  async remove(id: string) { 
+    await this.productRepository.delete(id); 
+    return { deleted: true };
+  }
+
+  async reduceStock(items: { productId: string; quantity: number }[]) {
+    this.logger.log(' Iniciando reducción de stock...');
+    
+    for (const item of items) {
+      const product = await this.findOne(item.productId);
+      
+      if (product.stock < item.quantity) {
+        throw new Error(`Stock insuficiente para ${product.name}`);
+      }
+
+      product.stock -= item.quantity;
+      await this.productRepository.save(product);
+      this.logger.log(` Stock actualizado: ${product.name} (Quedan: ${product.stock})`);
+    }
+    return { success: true };
   }
 }
