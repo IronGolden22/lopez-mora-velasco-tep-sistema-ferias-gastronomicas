@@ -116,7 +116,7 @@ export class OrdersService {
 
   async remove(id: string) { /* ... (igual que antes) ... */ return { deleted: true }; }
 
-  // EL CORAZÓN DEL PANEL DE ORGANIZADOR
+
   async getStatistics() {
     const orders = await this.orderRepository.find();
     
