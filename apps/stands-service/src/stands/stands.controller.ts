@@ -1,4 +1,5 @@
-import { Controller, Get, Post, Body, Param, Patch, Delete } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, Patch, Delete, ParseUUIDPipe } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices'; // 👈 Importante
 import { StandsService } from './stands.service';
 import { CreateStandDto } from './dto/create-stand.dto';
 import { UpdateStandDto } from './dto/update-stand.dto';
@@ -7,6 +8,16 @@ import { UpdateStandDto } from './dto/update-stand.dto';
 export class StandsController {
   constructor(private readonly standsService: StandsService) {}
 
+  //.
+  @MessagePattern({ cmd: 'validate_stand' })
+  async validateStand(@Payload() data: { id: string }) {
+    console.log(`(RPC) Verificando puesto ID: ${data.id}`);
+    const stand = await this.standsService.findOne(data.id);
+
+    return stand; 
+  }
+  //.
+  
   @Post()
   create(@Body() createStandDto: CreateStandDto) {
     return this.standsService.create(createStandDto);
@@ -18,17 +29,17 @@ export class StandsController {
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string) {
+  findOne(@Param('id', ParseUUIDPipe) id: string) {
     return this.standsService.findOne(id);
   }
 
   @Patch(':id') 
-  update(@Param('id') id: string, @Body() updateStandDto: UpdateStandDto) {
+  update(@Param('id', ParseUUIDPipe) id: string, @Body() updateStandDto: UpdateStandDto) {
     return this.standsService.update(id, updateStandDto);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
+  remove(@Param('id', ParseUUIDPipe) id: string) {
     return this.standsService.remove(id);
   }
 }

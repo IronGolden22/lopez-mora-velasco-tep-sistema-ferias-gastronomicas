@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty, MinLength } from 'class-validator';
+import { IsString, IsNotEmpty, MinLength, IsUUID } from 'class-validator';
 
 export class CreateStandDto {
   @IsString()
@@ -13,4 +13,9 @@ export class CreateStandDto {
   @IsString()
   @IsNotEmpty()
   location: string;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsUUID()
+  ownerId: string;
 }

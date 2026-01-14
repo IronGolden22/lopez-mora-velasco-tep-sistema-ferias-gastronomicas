@@ -1,4 +1,5 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, ParseUUIDPipe } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices'; // 👈 Importar esto
 import { ProductsService } from './products.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
@@ -6,6 +7,21 @@ import { UpdateProductDto } from './dto/update-product.dto';
 @Controller('products')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
+
+  //.
+  @MessagePattern({ cmd: 'validate_product' })
+  async validateProduct(@Payload() data: { id: string }) {
+    console.log(`🔎 (RPC) Verificando producto ID: ${data.id}`);
+    
+    try {
+      const product = await this.productsService.findOne(data.id);
+      
+      return product; 
+    } catch (error) {
+      return null;
+    }
+  }
+  //.
 
   @Post()
   create(@Body() createProductDto: CreateProductDto) {

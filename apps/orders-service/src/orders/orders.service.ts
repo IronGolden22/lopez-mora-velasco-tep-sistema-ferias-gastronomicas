@@ -1,4 +1,4 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { UpdateOrderDto } from './dto/update-order.dto';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,27 +17,29 @@ export class OrdersService {
     @Inject('PRODUCTS_SERVICE') private readonly productsClient: ClientProxy,
   ) {}
 
-  async create(createOrderDto: CreateOrderDto) {
-    // 1. (Simulación) 
-    const productId = 1; 
+async create(createOrderDto: CreateOrderDto) {
+    
+    const productId = createOrderDto['productId'] || 'f5f1ac24-c319-4fc8-be11-66e05b02fdaf'; 
 
-    this.logger.log(`Intentando conectar con Productos para validar ID: ${productId}...`);
+    this.logger.log(`Validando producto ${productId} antes de crear orden...`);
 
-    try {
-      const productData = await firstValueFrom(
-        this.productsClient.send({ cmd: 'validate_product' }, { id: productId })
-      );
+    const product = await firstValueFrom(
+      this.productsClient.send({ cmd: 'validate_product' }, { id: productId })
+    );
 
-      this.logger.log('Producto validado por RPC:', productData);
-      
-      // Aqui va la logica de: Si no hay stock, lanzar error.
-
-    } catch (error) {
-      this.logger.error('Error contactando a Productos:', error);
-      // Por ahora no bloqueamos el pedido si falla, solo logueamos el error
+    if (!product) {
+      this.logger.error('❌ Producto no encontrado. Cancelando orden.');
+      throw new HttpException('El producto no existe', HttpStatus.NOT_FOUND); 
     }
 
-    
+    if (product.stock <= 0) {
+        this.logger.error('❌ Sin stock. Cancelando orden.');
+        throw new HttpException('Producto agotado', HttpStatus.BAD_REQUEST);
+    }
+
+    this.logger.log(`✅ Producto válido: ${product.name}. Precio: ${product.price}`);
+
+
     const newOrder = this.orderRepository.create(createOrderDto);
     return await this.orderRepository.save(newOrder);
   }

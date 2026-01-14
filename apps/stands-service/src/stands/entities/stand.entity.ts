@@ -1,11 +1,11 @@
 import { Entity, PrimaryGeneratedColumn, Column } from 'typeorm';
 
-@Entity('stands') // <--- Esto le dice a Postgres: "Crea una tabla llamada 'stands'"
+@Entity('stands')
 export class Stand {
-  @PrimaryGeneratedColumn('uuid') // Crea una columna ID autogenerada
+  @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column('text') // Crea una columna de texto
+  @Column('text')
   name: string;
 
   @Column('text')
@@ -13,4 +13,10 @@ export class Stand {
 
   @Column('text')
   location: string;
+
+  @Column('text')
+  ownerId: string;
+
+  @Column('text', { default: 'PENDIENTE' })
+  status: string;
 }

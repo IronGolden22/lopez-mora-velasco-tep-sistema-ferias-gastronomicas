@@ -1,53 +1,51 @@
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, Logger, HttpException, HttpStatus } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { CreateStandDto } from './dto/create-stand.dto';
+import { ClientProxy } from '@nestjs/microservices';
+import { firstValueFrom } from 'rxjs';
 import { Stand } from './entities/stand.entity';
+import { CreateStandDto } from './dto/create-stand.dto';
+import { UpdateStandDto } from './dto/update-stand.dto';
 
 @Injectable()
 export class StandsService {
+  private readonly logger = new Logger(StandsService.name);
+
   constructor(
     @InjectRepository(Stand)
     private readonly standRepository: Repository<Stand>,
+    @Inject('USERS_SERVICE') private readonly usersClient: ClientProxy,
   ) {}
 
-  // Crear un puesto (Guardar en BD)
   async create(createStandDto: CreateStandDto) {
-    const newStand = this.standRepository.create(createStandDto);
-    return await this.standRepository.save(newStand);
-  }
+    const { ownerId } = createStandDto;
+    this.logger.log(`Validando dueño ID: ${ownerId}...`);
 
-  // Listar todos (Leer de BD)
-  async findAll() {
-    return await this.standRepository.find();
-  }
+    try {
+      const user = await firstValueFrom(
+        this.usersClient.send('validate_user', ownerId) 
+      );
 
-  // Buscar uno por ID
-  async findOne(id: string) {
-    return await this.standRepository.findOneBy({ id });
-  }
+      if (!user || !user.id || user.id !== ownerId) {
+        throw new Error('User not found');
+      }
 
-  async update(id: string, updateStandDto: any) {
-
-    const stand = await this.standRepository.preload({
-      id: id,
-      ...updateStandDto,
-    });
-
-    if (!stand) {
-      throw new Error(`Stand #${id} not found`); 
+      this.logger.log(`✅ Dueño validado: ${user.email}`);
+      
+      const newStand = this.standRepository.create(createStandDto);
+      return await this.standRepository.save(newStand);
+      
+    } catch (error) {
+      this.logger.error(`Validación fallida para: ${ownerId}`);
+      throw new HttpException('El usuario no existe o está inactivo', HttpStatus.NOT_FOUND);
     }
-
-    return await this.standRepository.save(stand);
   }
 
-  // Eliminar un puesto
-  async remove(id: string) {
-    const stand = await this.findOne(id);
-    if (stand) {
-      return await this.standRepository.remove(stand);
-    }
-    return null;
-  }
+  async findAll() { return this.standRepository.find(); }
 
+  async findOne(id: string) { return this.standRepository.findOneBy({ id }); }
+
+  async update(id: string, dto: UpdateStandDto) { return this.standRepository.update(id, dto); }
+  
+  async remove(id: string) { return this.standRepository.delete(id); }
 }

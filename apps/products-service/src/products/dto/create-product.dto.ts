@@ -1,4 +1,4 @@
-import { IsString, IsNumber, IsPositive, IsOptional, Min } from 'class-validator';
+import { IsString, IsNumber, IsPositive, IsOptional, Min, IsNotEmpty, IsUUID } from 'class-validator';
 
 export class CreateProductDto {
   @IsString()
@@ -14,4 +14,9 @@ export class CreateProductDto {
   @IsNumber()
   @Min(0) // El stock no puede ser negativo
   stock: number;
+
+  @IsString()
+  @IsNotEmpty()
+  @IsUUID()
+  standId: string;
 }
