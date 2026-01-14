@@ -4,8 +4,8 @@ import { UpdateOrderDto } from './dto/update-order.dto';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Order } from './entities/order.entity';
 import { Repository } from 'typeorm';
-import { ClientProxy } from '@nestjs/microservices'; // 👈 Importar ClientProxy
-import { firstValueFrom } from 'rxjs'; // 👈 Importar para convertir Observable a Promesa
+import { ClientProxy } from '@nestjs/microservices'; 
+import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class OrdersService {
